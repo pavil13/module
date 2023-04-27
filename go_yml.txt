@@ -1,0 +1,12 @@
+Запуск playbook:
+    ansible-playbook playbook.yml
+
+Software Installation
+1. We can install the community-general collections package via ansible-galaxy using the below code:
+    ansible-galaxy collection install community.general
+2. Then we must install Python v2.7 pip by running the below code:
+    sudo apt install python-pip
+3. We can install python v3 pip (pip3) by running the code:
+    sudo apt install python3-pip
+
+    sudo pip3 install proxmoxer
