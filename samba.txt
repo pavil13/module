@@ -1,0 +1,87 @@
+Шаг 1. Установка пакетов и подготовка
+
+Сначала обновите пакеты.
+
+sudo apt updatesudo apt upgrade
+
+После этого установите требуемые пакеты.
+
+sudo apt -y install realmd sssd sssd-tools libnss-sss libpam-sss adcli samba-common-bin oddjob oddjob-mkhomedir packagekit
+
+Далее мы настроим все инструменты. Вам требуется знать:
+
+Домен: office.local
+IP DNS-сервера: 192.168.0.1
+IP второго DNS-сервера: 192.168.0.2
+Шаг 2. Настройка DNS
+
+Откройте конфигурационный файл netplan:
+
+sudo nano /etc/netplan/*.yaml
+
+Если вы видите там «dhcp4: true», то есть ваш DHCP-сервер настроен корректно, переходите к следующему шагу. Если вы настраиваете параметры сетевого подключения вручную, ознакомьтесь с примером настройки:
+
+network:ethernets:enp0s3:addresses:- 192.168.0.15/24gateway4: 192.168.0.10nameservers:addresses: [192.168.0.1, 192.168.0.2]search:- office.localoptional: trueversion: 2
+
+addresses — это IP, назначаемый сетевой карте;
+gateway4 — IP роутера;
+nameservers — DNS-сервера;
+search — целевой домен.
+Примените изменения.
+
+sudo netplan apply
+
+Шаг 3. Обнаружение домена, присоединение к нему и проверка результата.
+
+В первую очередь требуется обнаружить домен:
+
+realm discover office.local
+
+Вы увидите что-то подобное. Это означает, что настройки сети верны и машина получила ответ от домена. Если нет, вам необходимо проверить настройки сети, домен и работоспособность DNS.
+
+office.localtype: kerberosrealm-name: OFFICE.LOCALdomain-name: office.localconfigured: no...
+
+Затем присоединитесь к домену AD. Замените admin1 на имя администратора и укажите пароль.
+
+realm join -U admin1 office.localPassword for admin1:
+
+Проверьте, возможен ли прием информации о пользователе AD. Замените user1 на имя пользователя вашего домена.
+
+id user1@office.localuid=687821651(user1@office.local) gid=687800512(user1@office.local) groups=687800512(domain users@office.local)
+
+Шаг 4. Последние настройки и авторизация.
+
+Необходимо произвести настройку, чтобы в будущем каждый раз не добавлять имя домена к имени пользователя.
+
+sudo nano /etc/sssd/sssd.conf
+
+Измените значение use_fully_qualified_names на False. Перезагрузите и проверьте:
+
+sudo systemctl restart sssdid useruid=687821651(user1@office.local) gid=687800512(user1@office.local) groups=687800512(domain users@office.local)
+
+Теперь нужно настроить создание домашних каталогов для пользователей AD при входе в систему.
+
+sudo nano /etc/pam.d/common-session#add this line in the end of filesession optional pam_mkhomedir.so skel=/etc/skel umask=077
+
+Войдите в систему как пользователь AD.
+
+su – userPassword:Creating directory '/home/user1@office.local'.user1@ubuntu-server:~$
+
+Это означает, что вы успешно вошли в систему как пользователь AD.
+
+Также вы можете разрешить авторизацию для некоторых пользователей и групп AD или же ограничить других. В приведенном ниже примере настроен запрет для всех пользователей, кроме user0, user1 и группы Main Admins.
+
+sudo realm deny –allsudo realm permit user0@office.local user1@office.localsudo realm permit -g 'Main Admins'
+
+Настройка пользователей AD для получения root-прав такая же, как и для локальных, но выполняется в другом файле.
+
+sudo nano /etc/sudoers.d/admins
+
+Добавьте к нему нужные строки. Например:
+
+user ALL=(ALL) ALL%Domain\\ Admins ALL=(ALL) ALL
+
+
+
+
+https://serverspace.ru/support/help/linux-active-directory/
