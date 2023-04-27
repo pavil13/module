@@ -1,0 +1,29 @@
+устанвока Ansible и community.general для работы community.general.proxmox
+1. apt update && apt upgrade 
+2. apt install python3 
+3. apt install python3-pip
+4. pip3 install ansible 
+5. ansible-galaxy install community.general 
+
+настрйока Ansible для подклчюения по ssh c помощью rsa ключа с root учетки
+1. mkdir dir_ansible && cd dir_ansible
+2. Надо настроить досутп к каждой машине по ssh с методом авторизации по ключу под root пользователя (надеюсь знаешь как делать) (в файле /etc/ssh/sshd_config не забудь раскоментить и поставить 'yes' вместо 'prohibit-passowrd' в строке PermitRootLogin на каждой машине)
+3. touch hosts
+4. nano hosts 
+файл должен быть такого вида (меняй значения в зависимости от того, что указано в задании): 
+
+[group1]
+
+cli_1 ansible_host=10.10.1.10 ansible_user=root ansible_ssh_private_key_file=<путь к ключу>
+cli_2 ansible_host=10.10.1.20 ansible_user=root ansible_ssh_private_key_file=<путь к ключу> 
+
+5. если в ansible --version парметр Config File = None, то пишем
+5.1 touch ansible.cfg && nano ansible.cfg
+5.2 Файл должен быть такого вида :
+
+[defaults]
+
+inventory = </root/dir_ansible/hosts> # путь к файлу hsots
+host_key_checking = false # если возникнут проблемы при подлкючении ансибла по ssh попробуй закомменитить или наоборот включить
+
+6. ansible all -m ping (если все ок, пропингуются все машины из hosts) Запускать там же где лежит файл ansible.cfg
